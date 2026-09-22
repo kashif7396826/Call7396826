@@ -95,10 +95,12 @@ class _TopupScreenState extends State<TopupScreen> {
         collectPostalCode: true,
       );
     } catch (e) {
-      setState(() {
-        _processing = false;
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _processing = false;
+          _error = e.toString();
+        });
+      }
     }
   }
 

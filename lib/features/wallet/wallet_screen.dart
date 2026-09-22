@@ -29,13 +29,16 @@ class _WalletScreenState extends State<WalletScreen> {
   Future<void> _load() async {
     try {
       final results = await Future.wait([_repository.getWallet(), _repository.getTransactions()]);
+      // Guards every setState below — the widget can be disposed (e.g. the user navigated
+      // away) while this request was still in flight, and setState() after dispose throws.
+      if (!mounted) return;
       setState(() {
         _wallet = results[0] as Wallet;
         _transactions = results[1] as List<WalletTransaction>;
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     }
   }
 

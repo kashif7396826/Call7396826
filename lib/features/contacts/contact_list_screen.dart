@@ -37,14 +37,15 @@ class _ContactListScreenState extends State<ContactListScreen> {
     setState(() => _loading = true);
     try {
       final contacts = await _repository.list(search: _searchController.text.trim());
+      if (!mounted) return;
       setState(() {
         _contacts = contacts;
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

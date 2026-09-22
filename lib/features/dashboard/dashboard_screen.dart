@@ -31,13 +31,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _load() async {
     try {
       final results = await Future.wait([_walletRepository.getWallet(), _callRepository.list(limit: 5)]);
+      if (!mounted) return;
       setState(() {
         _wallet = results[0] as Wallet;
         _recentCalls = (results[1] as CallListResult).calls;
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     }
   }
 

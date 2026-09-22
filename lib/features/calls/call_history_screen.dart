@@ -30,15 +30,16 @@ class _CallHistoryScreenState extends State<CallHistoryScreen> {
     setState(() => _loading = true);
     try {
       final result = await _repository.list(page: _page);
+      if (!mounted) return;
       setState(() {
         _calls.addAll(result.calls);
         _hasMore = _page < result.pagination.totalPages;
         _page++;
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

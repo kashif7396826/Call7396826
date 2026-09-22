@@ -26,9 +26,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
   Future<void> _load() async {
     try {
       final call = await _repository.getOne(widget.callId);
-      setState(() => _call = call);
+      if (mounted) setState(() => _call = call);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     }
   }
 

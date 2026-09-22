@@ -27,14 +27,15 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     setState(() => _loading = true);
     try {
       final invoices = await _repository.list();
+      if (!mounted) return;
       setState(() {
         _invoices = invoices;
         _error = null;
       });
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

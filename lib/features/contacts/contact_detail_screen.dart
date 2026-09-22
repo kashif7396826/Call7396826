@@ -28,9 +28,9 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
   Future<void> _load() async {
     try {
       final contact = await _repository.getOne(widget.contactId);
-      setState(() => _contact = contact);
+      if (mounted) setState(() => _contact = contact);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     }
   }
 

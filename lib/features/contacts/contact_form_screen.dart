@@ -80,7 +80,9 @@ class _ContactFormScreenState extends State<ContactFormScreen> {
       }
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
-      setState(() => _error = e.toString());
+      // Guarded like the finally block below — calling setState() after this widget is
+      // disposed (e.g. the user navigated back while the request was still in flight) throws.
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }

@@ -2,8 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'call_provider.dart';
 
-class InCallScreen extends StatelessWidget {
+class InCallScreen extends StatefulWidget {
   const InCallScreen({super.key});
+
+  @override
+  State<InCallScreen> createState() => _InCallScreenState();
+}
+
+class _InCallScreenState extends State<InCallScreen> {
+  // Consumer's builder re-runs on every notifyListeners() call while state stays `ended`
+  // during the ~900ms delay below (e.g. isMuted/isOnSpeaker changing) — without this guard,
+  // each rebuild would schedule ANOTHER delayed pop, and firing more than one could pop
+  // whatever screen the user navigated to after this one was already dismissed.
+  bool _popScheduled = false;
 
   String _statusLabel(ActiveCallState state) {
     switch (state) {
@@ -27,7 +38,8 @@ class InCallScreen extends StatelessWidget {
       body: SafeArea(
         child: Consumer<CallProvider>(
           builder: (context, calls, _) {
-            if (calls.state == ActiveCallState.ended) {
+            if (calls.state == ActiveCallState.ended && !_popScheduled) {
+              _popScheduled = true;
               // Give the "Call ended" label a moment to be visible before popping.
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 Future.delayed(const Duration(milliseconds: 900), () {

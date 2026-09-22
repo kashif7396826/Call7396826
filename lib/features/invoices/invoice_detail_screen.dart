@@ -25,9 +25,9 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen> {
   Future<void> _load() async {
     try {
       final invoice = await _repository.getOne(widget.invoiceId);
-      setState(() => _invoice = invoice);
+      if (mounted) setState(() => _invoice = invoice);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     }
   }
 
