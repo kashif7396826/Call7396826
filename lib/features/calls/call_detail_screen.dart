@@ -48,6 +48,44 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     }
   }
 
+  Future<void> _transferCall() async {
+    final controller = TextEditingController();
+    final to = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transfer Call'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '+1 555 000 0000', labelText: 'Transfer to'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Transfer')),
+        ],
+      ),
+    );
+    if (to == null || to.isEmpty || !mounted) return;
+
+    try {
+      await _repository.transferCall(widget.callId, to);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Call transferred to $to.')));
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
+  Future<void> _runRecordingAction(Future<void> Function(int) action, String successMessage) async {
+    try {
+      await action(widget.callId);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,13 +112,49 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                       RecordingPlayer(callId: _call!.id),
                       const SizedBox(height: 24),
                     ],
-                    if (_mightBeLive)
+                    if (_mightBeLive) ...[
+                      Text('Live Call Controls', style: Theme.of(context).textTheme.titleMedium),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4, bottom: 8),
+                        child: Text(
+                          "This is a REST snapshot, not proof the call is still live — Twilio's real API is the source of truth and will reject these cleanly if it isn't.",
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _transferCall,
+                            icon: const Icon(Icons.phone_forwarded),
+                            label: const Text('Transfer'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _runRecordingAction(_repository.pauseRecording, 'Recording paused.'),
+                            icon: const Icon(Icons.pause_circle_outline),
+                            label: const Text('Pause Recording'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _runRecordingAction(_repository.resumeRecording, 'Recording resumed.'),
+                            icon: const Icon(Icons.play_circle_outline),
+                            label: const Text('Resume Recording'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _runRecordingAction(_repository.stopRecording, 'Recording stopped.'),
+                            icon: const Icon(Icons.stop_circle_outlined),
+                            label: const Text('Stop Recording'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       FilledButton.icon(
                         onPressed: _endCall,
                         icon: const Icon(Icons.call_end),
                         label: const Text('End Call'),
                         style: FilledButton.styleFrom(backgroundColor: Colors.red),
                       ),
+                    ],
                   ],
                 ),
     );
