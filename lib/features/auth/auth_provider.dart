@@ -102,4 +102,12 @@ class AuthProvider extends ChangeNotifier {
     status = AuthStatus.unauthenticated;
     notifyListeners();
   }
+
+  /// Called after a successful PATCH /users/me so every screen watching this provider (e.g.
+  /// the dashboard's "Hi, {name}" greeting) reflects the change immediately, without needing
+  /// its own GET /auth/me round-trip.
+  void updateCurrentUser(User user) {
+    currentUser = user;
+    notifyListeners();
+  }
 }

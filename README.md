@@ -98,6 +98,10 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   including a "Call" button that starts a real outbound call to that contact.
 - **Invoices** — real, read-only data from `/invoices` (server-generated, Super Admin only via
   the website — this app just lists/views them), linked from the Wallet screen.
+- **Edit Profile / Change Password** — real `PATCH /users/me` and `POST /users/me/password`
+  (already verified server-side against a real account before this UI existed — see the
+  Node API's own commit history). Not shown for publisher accounts, matching the backend's own
+  `requireNonPublisher()` gate on these endpoints.
 - **Outbound calling** — real Twilio Voice SDK integration (`twilio_voice` plugin) against
   `GET /calls/incoming/token` for the access token and the real outbound TwiML webhook
   server-side. **Will not actually connect a call yet** — see the TwiML App repoint note below.
@@ -146,7 +150,7 @@ lib/
     contacts/     — list/search, create, edit, delete, call
     wallet/       — balance + transaction ledger, real Square In-App Payments top-up
     invoices/     — read-only list/detail (server-generated)
-    profile/      — current user + logout
+    profile/      — current user, edit profile, change password, logout
     home/         — authenticated app shell (bottom nav + Socket.IO connection lifetime)
 ```
 
