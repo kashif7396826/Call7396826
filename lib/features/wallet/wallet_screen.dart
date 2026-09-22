@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../auth/auth_provider.dart';
 import 'wallet.dart';
 import 'wallet_repository.dart';
+import 'topup_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -35,11 +38,24 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  Future<void> _openTopup() async {
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TopupScreen()));
+    _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.simpleCurrency();
+    final user = context.watch<AuthProvider>().currentUser;
+    // Matches the backend's own gate on POST /wallet/topup (client_admin/super_admin only —
+    // requireRole in walletRoutes.js) — hiding the button for anyone else is a UX nicety, the
+    // real enforcement is server-side regardless of what this app shows.
+    final canTopup = user != null && (user.isClientAdmin || user.isSuperAdmin);
     return Scaffold(
-      appBar: AppBar(title: const Text('Wallet')),
+      appBar: AppBar(
+        title: const Text('Wallet'),
+        actions: [if (canTopup) IconButton(onPressed: _openTopup, icon: const Icon(Icons.add_card))],
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _error != null

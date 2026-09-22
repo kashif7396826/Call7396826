@@ -18,8 +18,38 @@ class WalletRepository {
     return data.map((t) => WalletTransaction.fromJson(t as Map<String, dynamic>)).toList();
   }
 
-  // POST /wallet/topup is intentionally NOT wired up here yet — it needs the Square In-App
-  // Payments SDK integrated natively (Android/iOS) to tokenize a real card client-side, the
-  // same way the website uses Square's Web Payments SDK. That's a separate, real native
-  // integration this pass doesn't include — see README.md's "What's NOT built yet".
+  /// GET /wallet/payment-config — the Square Application ID + Location ID needed to initialize
+  /// InAppPayments (not secrets, see the backend route's own doc comment). Call before showing
+  /// the top-up screen.
+  Future<({String applicationId, String locationId})> getPaymentConfig() async {
+    final response = await _api.get('/wallet/payment-config');
+    final data = response.data as Map<String, dynamic>;
+    return (applicationId: data['squareApplicationId'] as String, locationId: data['squareLocationId'] as String);
+  }
+
+  /// POST /wallet/topup — charges a real card via Square and credits the wallet only once
+  /// Square confirms the payment COMPLETED (see walletController.js's topup()). [sourceId] and
+  /// [verificationToken] come from a completed Square In-App Payments buyer-verification flow
+  /// (see topup_screen.dart) — this repository never sees a raw card number, only Square's own
+  /// opaque tokens.
+  Future<double> topup({
+    required double amount,
+    String? sourceId,
+    String? verificationToken,
+    bool useSavedCard = false,
+    bool saveCard = false,
+  }) async {
+    final response = await _api.post('/wallet/topup', data: {
+      'amount': amount,
+      if (sourceId != null) 'sourceId': sourceId,
+      if (verificationToken != null) 'verificationToken': verificationToken,
+      'useSavedCard': useSavedCard,
+      'saveCard': saveCard,
+    });
+    // (response.data['newBalance'] as num).toDouble() — not a plain `as double` cast: JSON
+    // numbers with no fractional part (e.g. a balance that lands on a whole dollar) decode as
+    // Dart `int`, and `int as double` throws at runtime. Same reasoning as wallet.dart's
+    // double.parse(json[...].toString()) pattern for every other money field in this app.
+    return ((response.data as Map<String, dynamic>)['newBalance'] as num).toDouble();
+  }
 }

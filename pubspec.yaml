@@ -4,8 +4,12 @@ publish_to: "none"
 version: 0.1.0+1
 
 environment:
-  sdk: ">=3.4.0 <4.0.0"
-  flutter: ">=3.22.0"
+  # Raised from >=3.22.0/>=3.4.0 to match square_in_app_payments' real, current requirement
+  # (the official Square plugin needs Flutter >=3.44.0 for its Swift Package Manager iOS
+  # integration) — checked against the live pub.dev listing, not assumed. twilio_voice's own
+  # floor (Flutter >=3.22.0) is comfortably below this, so raising it doesn't conflict.
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:
@@ -27,6 +31,12 @@ dependencies:
   # Plays the real recording audio streamed from GET /calls/:id/recording (an authenticated,
   # proxied endpoint — never a raw provider URL) — see features/calls/recording_player.dart.
   just_audio: ^0.10.6
+
+  # Official Square In-App Payments SDK plugin — real card tokenization for wallet top-up,
+  # same PCI model as the website's Web Payments SDK (card numbers never reach this app's own
+  # code, only Square's native card-entry UI and the resulting opaque nonce). Android
+  # minSdkVersion 28 required — see README.md.
+  square_in_app_payments: ^2.0.0
 
   # Formatting (phone numbers, currency, dates) shown throughout the app.
   intl: ^0.20.3

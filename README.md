@@ -59,6 +59,14 @@ android:networkSecurityConfig="@xml/network_security_config"
 `com.twilio.twilio_voice.fcm.VoiceFirebaseMessagingService` also needs to go here. Not added
 yet since it requires a real Firebase project this app doesn't have.)
 
+### Android minSdkVersion
+
+`square_in_app_payments` (the official Square SDK, used for wallet top-up) requires
+**`minSdkVersion 28`** (Android 9) — higher than Flutter's own template default. After running
+`flutter create` (step 2 above), open `android/app/build.gradle` (or `build.gradle.kts`) and
+raise `minSdkVersion`/`minSdk` to `28` if it isn't already. `twilio_voice` doesn't impose a
+higher floor than this.
+
 ## Pointing at a real backend for local development
 
 `lib/core/config/api_config.dart` defaults to `https://api.calldrag.com/api/v1` — the real
@@ -93,6 +101,14 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   server-side. **Will not actually connect a call yet** — see the TwiML App repoint note below.
 - **Real-time call events** — a real Socket.IO connection (`core/realtime/socket_service.dart`)
   to the same server that pushes `call:event` messages from `src/realtime/callEvents.js`.
+- **Wallet top-up** — real card tokenization via the official Square In-App Payments SDK
+  (`square_in_app_payments`), using the buyer-verification flow
+  (`startCardEntryFlowWithBuyerVerification`) since this account's Square integration requires
+  SCA/3D-Secure (same reason the website passes `billingContact` into its own `tokenize()`
+  call). Discovered and fixed a real backend gap while building this: the mobile SDK's
+  verification token is separate from the card nonce, and the backend's `squareCreatePayment()`
+  didn't have anywhere to put it — fixed server-side (`squareClient.js`,
+  `POST /wallet/topup`'s `verificationToken` field) before this screen was wired up against it.
 
 ## What's NOT built yet (real gaps, not silently skipped)
 
@@ -101,10 +117,6 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   `VoiceFirebaseMessagingService` registered in the manifest) that doesn't exist for this app
   yet — a genuine credential/setup gap, not something to fake. `voice_service.dart` only
   registers for outbound calling.
-- **Wallet top-up.** `POST /wallet/topup` exists and is real on the backend, but charging a
-  card from this app needs the Square **In-App Payments SDK** integrated natively — a separate,
-  real native integration this pass didn't include. `wallet_repository.dart` deliberately has no
-  `topup()` method yet.
 - **Hold.** No backend support at all yet — see the PHP/Node project's own notes on why (needs
   a Twilio Conference redesign).
 - **The live TwiML App repoint.** The Voice Request URL Twilio actually calls for outbound
@@ -130,7 +142,7 @@ lib/
     dashboard/    — wallet summary + recent calls
     calls/        — call history/detail, recording playback, outbound calling (Twilio Voice SDK)
     contacts/     — list/search, create, edit, delete, call
-    wallet/       — balance + transaction ledger (read-only for now)
+    wallet/       — balance + transaction ledger, real Square In-App Payments top-up
     profile/      — current user + logout
     home/         — authenticated app shell (bottom nav + Socket.IO connection lifetime)
 ```
