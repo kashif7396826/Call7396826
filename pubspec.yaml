@@ -1,0 +1,46 @@
+name: calldrag_mobile
+description: CallDrag mobile app — real calling, contacts, wallet and call history against the live CallDrag API (api.calldrag.com). No mock data anywhere in this app.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking — talks to the real Node backend (api.calldrag.com/api/v1), never a mock server.
+  dio: ^5.11.1
+  socket_io_client: ^3.1.6
+
+  # Auth token storage — access/refresh tokens live here, never in plain SharedPreferences.
+  flutter_secure_storage: ^11.2.0
+
+  # State management.
+  provider: ^6.1.5+1
+
+  # Twilio Programmable Voice SDK wrapper — real outbound/inbound VoIP calling, no fake ringing.
+  twilio_voice: ^0.5.0
+
+  # Plays the real recording audio streamed from GET /calls/:id/recording (an authenticated,
+  # proxied endpoint — never a raw provider URL) — see features/calls/recording_player.dart.
+  just_audio: ^0.10.6
+
+  # Formatting (phone numbers, currency, dates) shown throughout the app.
+  intl: ^0.20.3
+
+  # Detects real connectivity loss so the app can show "you're offline" instead of a confusing
+  # network-error toast — never used to fabricate data while offline.
+  connectivity_plus: ^7.3.1
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

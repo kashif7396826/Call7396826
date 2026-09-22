@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Required by just_audio's header-forwarding proxy (see lib/features/calls/recording_player.dart)
+  — it runs a local HTTP server on 127.0.0.1 to attach the Authorization header to the real
+  recording stream from GET /calls/:id/recording. This allowlists cleartext ONLY for localhost;
+  every real network request this app makes (the API, Twilio, Socket.IO) is HTTPS/WSS regardless.
+  Referenced from AndroidManifest.xml via android:networkSecurityConfig="@xml/network_security_config"
+  — see README.md's Android setup steps.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

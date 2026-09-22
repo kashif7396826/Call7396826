@@ -1,0 +1,89 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'wallet.dart';
+import 'wallet_repository.dart';
+
+class WalletScreen extends StatefulWidget {
+  const WalletScreen({super.key});
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  final _repository = WalletRepository();
+  Wallet? _wallet;
+  List<WalletTransaction> _transactions = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final results = await Future.wait([_repository.getWallet(), _repository.getTransactions()]);
+      setState(() {
+        _wallet = results[0] as Wallet;
+        _transactions = results[1] as List<WalletTransaction>;
+        _error = null;
+      });
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currency = NumberFormat.simpleCurrency();
+    return Scaffold(
+      appBar: AppBar(title: const Text('Wallet')),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _error != null
+            ? Center(child: Text(_error!))
+            : _wallet == null
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Balance', style: TextStyle(color: Colors.grey)),
+                              Text(
+                                currency.format(_wallet!.balance),
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                      color: _wallet!.isLowBalance ? Colors.orange : null,
+                                    ),
+                              ),
+                              if (_wallet!.isLowBalance) const Text('Low balance', style: TextStyle(color: Colors.orange)),
+                              if (_wallet!.status != 'active')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: Text('Account ${_wallet!.status}', style: const TextStyle(color: Colors.red)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Recent Transactions', style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 8),
+                      ..._transactions.map((tx) => ListTile(
+                            leading: Icon(tx.amount >= 0 ? Icons.add_circle_outline : Icons.remove_circle_outline),
+                            title: Text(tx.description ?? tx.type),
+                            subtitle: Text(DateFormat.yMd().add_jm().format(tx.createdAt)),
+                            trailing: Text(currency.format(tx.amount)),
+                          )),
+                    ],
+                  ),
+      ),
+    );
+  }
+}
