@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/realtime/socket_service.dart';
 import '../calls/call_history_screen.dart';
+import '../contacts/contact_list_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../profile/profile_screen.dart';
 import '../wallet/wallet_screen.dart';
@@ -18,7 +19,13 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  final _screens = const [DashboardScreen(), CallHistoryScreen(), WalletScreen(), ProfileScreen()];
+  final _screens = const [
+    DashboardScreen(),
+    CallHistoryScreen(),
+    ContactListScreen(),
+    WalletScreen(),
+    ProfileScreen(),
+  ];
 
   @override
   void initState() {
@@ -61,6 +68,7 @@ class _HomeShellState extends State<HomeShell> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Calls'),
+          NavigationDestination(icon: Icon(Icons.contacts_outlined), selectedIcon: Icon(Icons.contacts), label: 'Contacts'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],

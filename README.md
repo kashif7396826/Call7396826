@@ -84,7 +84,10 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
 - **Recording playback** — streams the real, authenticated, server-proxied audio from
   `GET /calls/:id/recording` (never a raw Twilio/Telnyx URL — same rule as `recordings/play.php`
   on the PHP side).
-- **Live call control** — `POST /calls/:id/end` wired up from the call detail screen.
+- **Live call control** — `POST /calls/:id/end` and `/transfer` wired up from the call detail
+  screen, plus `/recording/pause`, `/resume`, `/stop`.
+- **Contacts** — full real CRUD against `/contacts` (list with search, create, edit, delete),
+  including a "Call" button that starts a real outbound call to that contact.
 - **Outbound calling** — real Twilio Voice SDK integration (`twilio_voice` plugin) against
   `GET /calls/incoming/token` for the access token and the real outbound TwiML webhook
   server-side. **Will not actually connect a call yet** — see the TwiML App repoint note below.
@@ -102,12 +105,8 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   card from this app needs the Square **In-App Payments SDK** integrated natively — a separate,
   real native integration this pass didn't include. `wallet_repository.dart` deliberately has no
   `topup()` method yet.
-- **Contacts.** The backend has a full real CRUD API (`/contacts`) with no mobile UI yet.
-  Straightforward, real follow-up work.
-- **Call transfer, recording pause/resume/stop, hold.** The backend REST actions
-  (`POST /calls/:id/transfer`, `/recording/pause`, `/resume`, `/stop`) exist and are real, but
-  this pass only wired up `end` from the UI. Hold specifically has no backend support at all yet
-  — see the PHP/Node project's own notes on why (needs a Twilio Conference redesign).
+- **Hold.** No backend support at all yet — see the PHP/Node project's own notes on why (needs
+  a Twilio Conference redesign).
 - **The live TwiML App repoint.** The Voice Request URL Twilio actually calls for outbound
   calls still points at the PHP webhook (`webhooks/twiml_voice.php`), not the Node one this app
   and the browser softphone are meant to share. This is a deliberate, already-discussed decision
@@ -130,6 +129,7 @@ lib/
     auth/         — login, TOTP, session state (Provider)
     dashboard/    — wallet summary + recent calls
     calls/        — call history/detail, recording playback, outbound calling (Twilio Voice SDK)
+    contacts/     — list/search, create, edit, delete, call
     wallet/       — balance + transaction ledger (read-only for now)
     profile/      — current user + logout
     home/         — authenticated app shell (bottom nav + Socket.IO connection lifetime)
