@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_provider.dart';
+import '../invoices/invoice_list_screen.dart';
 import 'wallet.dart';
 import 'wallet_repository.dart';
 import 'topup_screen.dart';
@@ -54,7 +55,14 @@ class _WalletScreenState extends State<WalletScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Wallet'),
-        actions: [if (canTopup) IconButton(onPressed: _openTopup, icon: const Icon(Icons.add_card))],
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvoiceListScreen())),
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Invoices',
+          ),
+          if (canTopup) IconButton(onPressed: _openTopup, icon: const Icon(Icons.add_card), tooltip: 'Add Funds'),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _load,

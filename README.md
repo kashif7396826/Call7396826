@@ -96,6 +96,8 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   screen, plus `/recording/pause`, `/resume`, `/stop`.
 - **Contacts** — full real CRUD against `/contacts` (list with search, create, edit, delete),
   including a "Call" button that starts a real outbound call to that contact.
+- **Invoices** — real, read-only data from `/invoices` (server-generated, Super Admin only via
+  the website — this app just lists/views them), linked from the Wallet screen.
 - **Outbound calling** — real Twilio Voice SDK integration (`twilio_voice` plugin) against
   `GET /calls/incoming/token` for the access token and the real outbound TwiML webhook
   server-side. **Will not actually connect a call yet** — see the TwiML App repoint note below.
@@ -143,6 +145,7 @@ lib/
     calls/        — call history/detail, recording playback, outbound calling (Twilio Voice SDK)
     contacts/     — list/search, create, edit, delete, call
     wallet/       — balance + transaction ledger, real Square In-App Payments top-up
+    invoices/     — read-only list/detail (server-generated)
     profile/      — current user + logout
     home/         — authenticated app shell (bottom nav + Socket.IO connection lifetime)
 ```
