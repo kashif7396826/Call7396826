@@ -1,6 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/realtime/socket_service.dart';
 import '../calls/call_history_screen.dart';
+import '../calls/call_provider.dart';
+import '../calls/in_call_screen.dart';
+import '../calls/voice_service.dart';
 import '../contacts/contact_list_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../profile/profile_screen.dart';
@@ -27,14 +32,40 @@ class _HomeShellState extends State<HomeShell> {
     ProfileScreen(),
   ];
 
+  // Captured once in initState() rather than looked up again in dispose() — calling
+  // context.read() from dispose() is unsafe (the element tree may already be torn down by
+  // then) and provider's own docs warn against it.
+  late final CallProvider _calls;
+
   @override
   void initState() {
     super.initState();
     SocketService.instance.connect(onCallEvent: _handleCallEvent);
+
+    // Registers this device with Twilio as soon as the user is authenticated — not deferred
+    // until the first outbound dial — so an inbound call (once Firebase/FCM is configured; a
+    // real gap tracked in README.md, harmless no-op until then) can actually reach this device.
+    _calls = context.read<CallProvider>();
+    _calls.listenForIncomingCalls();
+    _calls.onIncomingCallActive = () {
+      if (mounted) Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InCallScreen()));
+    };
+    // Best-effort — a transient network hiccup at app startup shouldn't be an unhandled
+    // exception; the dialer's own startCall() re-registers with a fresh token before placing
+    // a call regardless, so a failure here just means inbound calls won't reach this device
+    // until the next successful registration. Wrapped in its own try/catch (not
+    // .catchError()) since register() returns Future<String> and a .catchError handler that
+    // returns nothing would itself throw trying to complete a non-nullable String future.
+    unawaited(() async {
+      try {
+        await VoiceService.instance.register();
+      } catch (_) {}
+    }());
   }
 
   @override
   void dispose() {
+    _calls.onIncomingCallActive = null;
     SocketService.instance.disconnect();
     super.dispose();
   }

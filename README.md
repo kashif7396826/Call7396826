@@ -55,9 +55,17 @@ Add to `android/app/src/main/AndroidManifest.xml`, inside `<application ...>`:
 android:networkSecurityConfig="@xml/network_security_config"
 ```
 
-(If/when inbound calling is built — see below — a `<service>` block for
-`com.twilio.twilio_voice.fcm.VoiceFirebaseMessagingService` also needs to go here. Not added
-yet since it requires a real Firebase project this app doesn't have.)
+For inbound calling (see "Inbound calling setup" below), also add, inside `<application ...>`:
+
+```xml
+<service android:name="com.twilio.twilio_voice.fcm.VoiceFirebaseMessagingService"
+    android:exported="false"
+    android:stopWithTask="false">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+```
 
 ### Android minSdkVersion
 
@@ -67,12 +75,46 @@ yet since it requires a real Firebase project this app doesn't have.)
 raise `minSdkVersion`/`minSdk` to `28` if it isn't already. `twilio_voice` doesn't impose a
 higher floor than this.
 
+## Inbound calling setup
+
+All the code for this is already in place (`voice_service.dart` requests a device token and
+wires up token refresh, `call_provider.dart` recognizes an inbound call via
+`TwilioCallPlatform.activeCall` and tells `home_shell.dart` to navigate into the in-call screen,
+`main.dart` initializes Firebase). What's genuinely missing is a real Firebase project — this
+repo can't create one on your behalf (no AI agent should be creating third-party accounts for
+you). Until you do this, the app runs completely normally; `main.dart`'s Firebase.initializeApp()
+just fails against the placeholder config in `firebase_options.dart` and gets caught, so only
+inbound calling is unavailable — everything else in this app is unaffected.
+
+1. Create a project at [Firebase Console](https://console.firebase.google.com).
+2. Add an Android app to it with the applicationId `flutter create` gave this project (default:
+   `com.calldrag.calldrag_mobile`, from step 2's `--org com.calldrag` above).
+3. Install the CLI (`dart pub global activate flutterfire_cli`) and run
+   `flutterfire configure` from this project's root, selecting the project/app you just made.
+   This OVERWRITES `lib/firebase_options.dart` with your real values (see that file's own doc
+   comment) and places `google-services.json` under `android/app/` — already gitignored, never
+   commit it.
+4. Add the `<service>` block above to `AndroidManifest.xml`.
+5. In [Twilio Console](https://console.twilio.com) → Voice → Manage → Push Credentials, create
+   an Android (FCM) push credential using the Firebase project's **Server key**
+   (Firebase Console → Project Settings → Cloud Messaging → legacy API, or a service account
+   under the newer HTTP v1 API — twilio_voice's own troubleshooting doc covers both). This is
+   what actually lets Twilio deliver a ringing notification to a real device — without it,
+   Twilio has a device token but nowhere to send the push.
+6. Rebuild and run. A real inbound call to this agent's Twilio identity should now ring the
+   device via Android's native ConnectionService UI (or iOS CallKit) — this app never draws its
+   own incoming-call screen; it only shows `InCallScreen` reactively once the native UI answers.
+
 ## Pointing at a real backend for local development
 
 `lib/core/config/api_config.dart` defaults to `https://api.calldrag.com/api/v1` — the real
-production API. **As of 2026-09-22 that endpoint is not yet publicly reachable** (a pending
-LiteSpeed routing issue on that host — see `api.calldrag.com`'s own git history / the PHP
-project's `CLAUDE.md`), so login will fail against it until that's resolved.
+production API. **As of 2026-09-22, the app itself is live and responding correctly there**
+(verified with a real authenticated request) — the one remaining blocker is that
+`api.calldrag.com` still serves the hosting account's default shared SSL certificate instead of
+a real one for that domain, so any client that correctly verifies the hostname (this app
+included) will refuse the connection until a real certificate is issued. That's a host-level
+permission gap (AutoSSL isn't enabled for this account), not something fixable from this
+project's code.
 
 For local development against a Node server running on your own machine:
 
@@ -102,9 +144,16 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   (already verified server-side against a real account before this UI existed — see the
   Node API's own commit history). Not shown for publisher accounts, matching the backend's own
   `requireNonPublisher()` gate on these endpoints.
-- **Outbound calling** — real Twilio Voice SDK integration (`twilio_voice` plugin) against
-  `GET /calls/incoming/token` for the access token and the real outbound TwiML webhook
-  server-side. **Will not actually connect a call yet** — see the TwiML App repoint note below.
+- **Outbound and inbound calling** — real Twilio Voice SDK integration (`twilio_voice`
+  plugin). Outbound: `GET /calls/incoming/token` for the access token, the real outbound TwiML
+  webhook server-side. Inbound: FCM device-token registration with token-refresh handling,
+  Android calling-account/permission setup, and `activeCall`-based direction detection so
+  `home_shell.dart` navigates into the in-call screen reactively when a call answered via the
+  native ConnectionService/CallKit UI becomes active — this app never draws its own
+  incoming-call screen. Both need a real Firebase project to actually test inbound (see
+  "Inbound calling setup" above) — the code doesn't fake that in the meantime, it degrades to
+  outbound-only. **Will not actually connect a call yet regardless** — see the TwiML App
+  repoint note below.
 - **Real-time call events** — a real Socket.IO connection (`core/realtime/socket_service.dart`)
   to the same server that pushes `call:event` messages from `src/realtime/callEvents.js`.
 - **Wallet top-up** — real card tokenization via the official Square In-App Payments SDK
@@ -118,11 +167,9 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
 
 ## What's NOT built yet (real gaps, not silently skipped)
 
-- **Inbound calling.** Twilio's Voice SDK delivers incoming-call notifications via Firebase
-  Cloud Messaging on Android. This needs a real Firebase project (`google-services.json`,
-  `VoiceFirebaseMessagingService` registered in the manifest) that doesn't exist for this app
-  yet — a genuine credential/setup gap, not something to fake. `voice_service.dart` only
-  registers for outbound calling.
+- **A real Firebase project.** All the inbound-calling CODE is in place (see above) — what's
+  missing is the actual Firebase project this repo can't create for you, plus the Twilio Push
+  Credential that depends on it. See "Inbound calling setup" above for the exact steps.
 - **Hold.** No backend support at all yet — see the PHP/Node project's own notes on why (needs
   a Twilio Conference redesign).
 - **The live TwiML App repoint.** The Voice Request URL Twilio actually calls for outbound

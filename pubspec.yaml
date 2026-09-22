@@ -38,6 +38,14 @@ dependencies:
   # minSdkVersion 28 required — see README.md.
   square_in_app_payments: ^2.0.0
 
+  # Firebase Cloud Messaging — how twilio_voice actually delivers an incoming-call notification
+  # on Android (there is no other transport). Needs a real Firebase project this repo doesn't
+  # (and can't) include — see README.md's "Inbound calling setup" for the one remaining manual
+  # step. firebase_core must come before firebase_messaging in initialization order at runtime,
+  # not in this file, but both are listed together since neither is useful without the other.
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
+
   # Formatting (phone numbers, currency, dates) shown throughout the app.
   intl: ^0.20.3
 
