@@ -3,15 +3,20 @@ import 'package:just_audio/just_audio.dart';
 import '../../core/config/api_config.dart';
 import '../../core/storage/token_storage.dart';
 
-/// Plays the real recording audio streamed from GET /calls/:id/recording — an authenticated,
-/// server-proxied endpoint (controllers/callController.js's getRecording, mirroring
-/// recordings/play.php) that never hands out a raw Twilio/Telnyx URL. The Authorization header
-/// is attached exactly like every other API call, via just_audio's own headers support (see
-/// its README's "Working with headers" — uses a local proxy under the hood, which is why
-/// android/app/src/main/res/xml/network_security_config.xml allowlists 127.0.0.1 for cleartext).
+/// Plays the real recording audio streamed from an authenticated, server-proxied endpoint
+/// (controllers/callController.js's getRecording for staff, or
+/// controllers/publisherController.js's getRecording for a publisher — mirroring
+/// recordings/play.php either way) that never hands out a raw Twilio/Telnyx URL. The
+/// Authorization header is attached exactly like every other API call, via just_audio's own
+/// headers support (see its README's "Working with headers" — uses a local proxy under the
+/// hood, which is why android/app/src/main/res/xml/network_security_config.xml allowlists
+/// 127.0.0.1 for cleartext).
 class RecordingPlayer extends StatefulWidget {
-  final int callId;
-  const RecordingPlayer({super.key, required this.callId});
+  /// The API path to stream from, e.g. `/calls/123/recording` or
+  /// `/publisher/calls/123/recording` — callers pass CallRepository.recordingUrl(id) or
+  /// PublisherRepository.recordingUrl(id) rather than building this themselves.
+  final String path;
+  const RecordingPlayer({super.key, required this.path});
 
   @override
   State<RecordingPlayer> createState() => _RecordingPlayerState();
@@ -31,7 +36,7 @@ class _RecordingPlayerState extends State<RecordingPlayer> {
   Future<void> _load() async {
     try {
       final token = await TokenStorage.instance.accessToken;
-      final url = '${ApiConfig.baseUrl}/calls/${widget.callId}/recording';
+      final url = '${ApiConfig.baseUrl}${widget.path}';
       await _player.setUrl(url, headers: {if (token != null) 'Authorization': 'Bearer $token'});
     } catch (e) {
       _error = 'Could not load recording: $e';

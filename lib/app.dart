@@ -4,6 +4,7 @@ import 'features/auth/auth_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calls/call_provider.dart';
 import 'features/home/home_shell.dart';
+import 'features/publisher/publisher_home_shell.dart';
 
 class CallDragApp extends StatelessWidget {
   const CallDragApp({super.key});
@@ -34,12 +35,15 @@ class _AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = context.watch<AuthProvider>().status;
-    switch (status) {
+    final auth = context.watch<AuthProvider>();
+    switch (auth.status) {
       case AuthStatus.unknown:
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       case AuthStatus.authenticated:
-        return const HomeShell();
+        // A publisher is blocked server-side from every route the staff shell's tabs use
+        // (contacts, wallet, live calling, real-time — all requireNonPublisher()) — routed to
+        // an entirely separate, narrower shell rather than a variant of the staff one.
+        return auth.currentUser?.isPublisher == true ? const PublisherHomeShell() : const HomeShell();
       case AuthStatus.awaitingTotp:
       case AuthStatus.unauthenticated:
         return const LoginScreen();

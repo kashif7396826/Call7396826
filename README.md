@@ -144,6 +144,15 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   (already verified server-side against a real account before this UI existed — see the
   Node API's own commit history). Not shown for publisher accounts, matching the backend's own
   `requireNonPublisher()` gate on these endpoints.
+- **Publisher role** — a completely separate app shell (`features/publisher/`), routed to
+  automatically at login for a publisher account. Dashboard, assigned numbers with per-number
+  stats, call history (all-numbers or filtered to one), and recording playback — all real data
+  from `/publisher/*`, scoped entirely server-side through `tracking_numbers.publisher_user_id`
+  (never client-level scoping, which would leak the rest of the client's numbers). No live
+  calling, contacts, or wallet — a publisher is blocked from those server-side too. Publisher
+  self-service profile editing (`publisher/settings.php`'s richer version with company
+  name/logo/timezone/notify prefs) isn't ported — same gap as staff Edit Profile, just for the
+  publisher-specific fields.
 - **Outbound and inbound calling** — real Twilio Voice SDK integration (`twilio_voice`
   plugin). Outbound: `GET /calls/incoming/token` for the access token, the real outbound TwiML
   webhook server-side. Inbound: FCM device-token registration with token-refresh handling,
@@ -182,8 +191,6 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   to defer until `api.calldrag.com` is confirmed publicly reachable — flipping it early would
   break the currently-working browser softphone. Until it happens, outbound calls placed from
   this app will reach Twilio but the TwiML response will come from the old PHP path.
-- **Publisher role.** Backend intentionally excludes publishers from most of this API
-  (`requireNonPublisher()`) — this app doesn't have a publisher-specific view either.
 
 ## Architecture
 
@@ -202,7 +209,8 @@ lib/
     wallet/       — balance + transaction ledger, real Square In-App Payments top-up
     invoices/     — read-only list/detail (server-generated)
     profile/      — current user, edit profile, change password, logout
-    home/         — authenticated app shell (bottom nav + Socket.IO connection lifetime)
+    home/         — staff authenticated app shell (bottom nav + Socket.IO connection lifetime)
+    publisher/    — separate, narrower shell + screens for the Publisher role
 ```
 
 State management is `provider` (ChangeNotifier) — chosen for its small footprint and directness

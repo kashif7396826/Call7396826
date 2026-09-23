@@ -111,7 +111,7 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                     const SizedBox(height: 24),
                     if (_call!.hasRecording) ...[
                       Text('Recording', style: Theme.of(context).textTheme.titleMedium),
-                      RecordingPlayer(callId: _call!.id),
+                      RecordingPlayer(path: _repository.recordingUrl(_call!.id)),
                       const SizedBox(height: 24),
                     ],
                     if (_mightBeLive) ...[
