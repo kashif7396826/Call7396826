@@ -134,8 +134,8 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
 - **Recording playback** — streams the real, authenticated, server-proxied audio from
   `GET /calls/:id/recording` (never a raw Twilio/Telnyx URL — same rule as `recordings/play.php`
   on the PHP side).
-- **Live call control** — `POST /calls/:id/end` and `/transfer` wired up from the call detail
-  screen, plus `/recording/pause`, `/resume`, `/stop`.
+- **Live call control** — `POST /calls/:id/end`, `/transfer`, `/hold`, `/resume`, and
+  `/recording/pause`/`/resume`/`/stop`, all wired up from the call detail screen.
 - **Contacts** — full real CRUD against `/contacts` (list with search, create, edit, delete),
   including a "Call" button that starts a real outbound call to that contact.
 - **Invoices** — real, read-only data from `/invoices` (server-generated, Super Admin only via
@@ -170,8 +170,12 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
 - **A real Firebase project.** All the inbound-calling CODE is in place (see above) — what's
   missing is the actual Firebase project this repo can't create for you, plus the Twilio Push
   Credential that depends on it. See "Inbound calling setup" above for the exact steps.
-- **Hold.** No backend support at all yet — see the PHP/Node project's own notes on why (needs
-  a Twilio Conference redesign).
+- **Hold's real-conference happy path.** `POST /calls/:id/hold`/`/resume` are wired up in the
+  call detail screen and real on the backend (a genuine Conference-based call topology, Twilio
+  Conference Participant hold) — but hasn't been exercised against an actual live call
+  (deliberately: this session won't place a real phone call to test it). Also needs
+  `schema_phase26_conference_calling.sql` run before it does anything but 501 — see the Node
+  API's own commit history.
 - **The live TwiML App repoint.** The Voice Request URL Twilio actually calls for outbound
   calls still points at the PHP webhook (`webhooks/twiml_voice.php`), not the Node one this app
   and the browser softphone are meant to share. This is a deliberate, already-discussed decision

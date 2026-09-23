@@ -40,6 +40,13 @@ class CallRepository {
   Future<void> resumeRecording(int id) => _api.post('/calls/$id/recording/resume');
   Future<void> stopRecording(int id) => _api.post('/calls/$id/recording/stop');
 
+  /// Real Twilio Conference Participant hold — only works for a call placed through the
+  /// conference-based topology (schema_phase26_conference_calling.sql on the backend). Returns
+  /// a real 501 for a call placed before that migration, not a fake success — see
+  /// callControlService.js's holdCall() on the backend for why.
+  Future<void> holdCall(int id) => _api.post('/calls/$id/hold');
+  Future<void> resumeCall(int id) => _api.post('/calls/$id/resume');
+
   /// The recording itself is streamed bytes (audio/mpeg), not JSON — GET /calls/:id/recording
   /// proxies it server-side and never hands out a raw provider URL (mirrors
   /// recordings/play.php). The player widget should point directly at this authenticated URL

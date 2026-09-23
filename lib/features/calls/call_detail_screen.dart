@@ -77,7 +77,9 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
     }
   }
 
-  Future<void> _runRecordingAction(Future<void> Function(int) action, String successMessage) async {
+  /// Shared by every simple one-shot call-control button (recording pause/resume/stop, hold,
+  /// resume) — each is just "call this endpoint, show a SnackBar either way, reload".
+  Future<void> _runCallAction(Future<void> Function(int) action, String successMessage) async {
     try {
       await action(widget.callId);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(successMessage)));
@@ -131,17 +133,31 @@ class _CallDetailScreenState extends State<CallDetailScreen> {
                             label: const Text('Transfer'),
                           ),
                           OutlinedButton.icon(
-                            onPressed: () => _runRecordingAction(_repository.pauseRecording, 'Recording paused.'),
+                            // Only works for a call placed through the newer conference-based
+                            // topology — the backend returns a real 501 (shown via the same
+                            // SnackBar error path) for a call placed before that migration,
+                            // never a fake success.
+                            onPressed: () => _runCallAction(_repository.holdCall, 'Call on hold.'),
+                            icon: const Icon(Icons.pause),
+                            label: const Text('Hold'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _runCallAction(_repository.resumeCall, 'Call resumed.'),
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Resume'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => _runCallAction(_repository.pauseRecording, 'Recording paused.'),
                             icon: const Icon(Icons.pause_circle_outline),
                             label: const Text('Pause Recording'),
                           ),
                           OutlinedButton.icon(
-                            onPressed: () => _runRecordingAction(_repository.resumeRecording, 'Recording resumed.'),
+                            onPressed: () => _runCallAction(_repository.resumeRecording, 'Recording resumed.'),
                             icon: const Icon(Icons.play_circle_outline),
                             label: const Text('Resume Recording'),
                           ),
                           OutlinedButton.icon(
-                            onPressed: () => _runRecordingAction(_repository.stopRecording, 'Recording stopped.'),
+                            onPressed: () => _runCallAction(_repository.stopRecording, 'Recording stopped.'),
                             icon: const Icon(Icons.stop_circle_outlined),
                             label: const Text('Stop Recording'),
                           ),
