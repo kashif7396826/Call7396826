@@ -153,6 +153,13 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   self-service profile editing (`publisher/settings.php`'s richer version with company
   name/logo/timezone/notify prefs) isn't ported — same gap as staff Edit Profile, just for the
   publisher-specific fields.
+- **SMS** — a genuinely new capability, ahead of the web app (explicit sign-off — see the
+  backend's own commit history): real send/receive via `/sms/threads`, a conversation view per
+  contact, and live push for a real inbound message (`sms:event` over the same Socket.IO
+  connection call events use). Send goes through the same DNC/client-suspension checks as
+  outbound calling before a real Twilio Messages API call. Reachable from the Messages tab or
+  a contact's own "Message" button. Twilio-provider only — a Telnyx number's messaging profile
+  isn't ported.
 - **Outbound and inbound calling** — real Twilio Voice SDK integration (`twilio_voice`
   plugin). Outbound: `GET /calls/incoming/token` for the access token, the real outbound TwiML
   webhook server-side. Inbound: FCM device-token registration with token-refresh handling,
@@ -211,6 +218,7 @@ lib/
     profile/      — current user, edit profile, change password, logout
     home/         — staff authenticated app shell (bottom nav + Socket.IO connection lifetime)
     publisher/    — separate, narrower shell + screens for the Publisher role
+    sms/          — conversation list + thread view, real send/receive
 ```
 
 State management is `provider` (ChangeNotifier) — chosen for its small footprint and directness

@@ -9,6 +9,7 @@ import '../calls/voice_service.dart';
 import '../contacts/contact_list_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../profile/profile_screen.dart';
+import '../sms/sms_threads_screen.dart';
 import '../wallet/wallet_screen.dart';
 
 /// The authenticated app shell — bottom-tab navigation plus the real-time Socket.IO
@@ -28,6 +29,7 @@ class _HomeShellState extends State<HomeShell> {
     DashboardScreen(),
     CallHistoryScreen(),
     ContactListScreen(),
+    SmsThreadsScreen(),
     WalletScreen(),
     ProfileScreen(),
   ];
@@ -40,7 +42,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void initState() {
     super.initState();
-    SocketService.instance.connect(onCallEvent: _handleCallEvent);
+    SocketService.instance.connect(onCallEvent: _handleCallEvent, onSmsEvent: _handleSmsEvent);
 
     // Registers this device with Twilio as soon as the user is authenticated — not deferred
     // until the first outbound dial — so an inbound call (once Firebase/FCM is configured; a
@@ -89,6 +91,18 @@ class _HomeShellState extends State<HomeShell> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), duration: const Duration(seconds: 2)));
   }
 
+  /// Same "real event, simple SnackBar for now" treatment as _handleCallEvent — a real inbound
+  /// SMS reported by webhooks/sms_inbound.php on the PHP side, pushed via
+  /// src/realtime/callEvents.js's emitSmsEvent(). Doesn't auto-refresh the threads/conversation
+  /// screens if they're open; pull-to-refresh picks it up, same as every other list in this app.
+  void _handleSmsEvent(Map<String, dynamic> event) {
+    if (!mounted) return;
+    final body = event['body'] as String?;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('New message${body != null ? ': $body' : ''}'), duration: const Duration(seconds: 2)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,6 +114,7 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Calls'),
           NavigationDestination(icon: Icon(Icons.contacts_outlined), selectedIcon: Icon(Icons.contacts), label: 'Contacts'),
+          NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
           NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
           NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],

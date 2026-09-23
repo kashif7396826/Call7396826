@@ -5,6 +5,7 @@ import 'contact_repository.dart';
 import 'contact_form_screen.dart';
 import '../calls/call_provider.dart';
 import '../calls/in_call_screen.dart';
+import '../sms/sms_conversation_screen.dart';
 
 class ContactDetailScreen extends StatefulWidget {
   final int contactId;
@@ -100,16 +101,28 @@ class _ContactDetailScreenState extends State<ContactDetailScreen> {
                       ListTile(leading: const Icon(Icons.notes), title: Text(_contact!.notes!)),
                     const SizedBox(height: 24),
                     if (!_contact!.onDncList)
-                      FilledButton.icon(
-                        onPressed: () async {
-                          // Same pattern as DialerScreen._call(): push the in-call UI, then
-                          // drive it via the shared CallProvider, so a call started from a
-                          // contact's own page behaves identically to one dialed manually.
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InCallScreen()));
-                          await context.read<CallProvider>().startCall(_contact!.phone);
-                        },
-                        icon: const Icon(Icons.call),
-                        label: const Text('Call'),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: () async {
+                              // Same pattern as DialerScreen._call(): push the in-call UI, then
+                              // drive it via the shared CallProvider, so a call started from a
+                              // contact's own page behaves identically to one dialed manually.
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InCallScreen()));
+                              await context.read<CallProvider>().startCall(_contact!.phone);
+                            },
+                            icon: const Icon(Icons.call),
+                            label: const Text('Call'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => SmsConversationScreen(contactId: _contact!.id, contactName: _contact!.fullName),
+                            )),
+                            icon: const Icon(Icons.message_outlined),
+                            label: const Text('Message'),
+                          ),
+                        ],
                       ),
                   ],
                 ),

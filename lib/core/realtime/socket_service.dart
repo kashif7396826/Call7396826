@@ -2,11 +2,12 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../config/api_config.dart';
 import '../storage/token_storage.dart';
 
-/// Real-time call-state push — mirrors the server side exactly: src/realtime/socketServer.js
+/// Real-time push — mirrors the server side exactly: src/realtime/socketServer.js
 /// authenticates the handshake with the SAME access token as the REST API
 /// (`handshake.auth.token`), and the server pushes a `call:event` message whenever a real call
-/// changes state (src/realtime/callEvents.js). This is not polling dressed up as real-time —
-/// there is a real Socket.IO connection here, or there is nothing.
+/// changes state, or an `sms:event` message for a real SMS (src/realtime/callEvents.js's
+/// emitCallEvent()/emitSmsEvent()). This is not polling dressed up as real-time — there is a
+/// real Socket.IO connection here, or there is nothing.
 ///
 /// Room scoping happens entirely server-side (a socket only ever joins its own
 /// `client:<clientId>` room) — this client just listens for whatever the server actually sends.
@@ -17,7 +18,10 @@ class SocketService {
   io.Socket? _socket;
 
   /// Call after login (and again after a token refresh that follows a reconnect failure).
-  Future<void> connect({required void Function(Map<String, dynamic> event) onCallEvent}) async {
+  Future<void> connect({
+    required void Function(Map<String, dynamic> event) onCallEvent,
+    void Function(Map<String, dynamic> event)? onSmsEvent,
+  }) async {
     final token = await TokenStorage.instance.accessToken;
     if (token == null) return;
 
@@ -35,6 +39,12 @@ class SocketService {
     _socket!.on('call:event', (data) {
       if (data is Map) {
         onCallEvent(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _socket!.on('sms:event', (data) {
+      if (data is Map && onSmsEvent != null) {
+        onSmsEvent(Map<String, dynamic>.from(data));
       }
     });
   }
