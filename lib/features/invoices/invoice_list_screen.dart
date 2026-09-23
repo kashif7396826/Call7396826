@@ -13,24 +13,28 @@ class InvoiceListScreen extends StatefulWidget {
 
 class _InvoiceListScreenState extends State<InvoiceListScreen> {
   final _repository = InvoiceRepository();
-  List<Invoice> _invoices = [];
+  final _invoices = <Invoice>[];
+  int _page = 1;
+  bool _loading = false;
+  bool _hasMore = true;
   String? _error;
-  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadMore();
   }
 
-  Future<void> _load() async {
+  Future<void> _loadMore() async {
+    if (_loading || !_hasMore) return;
     setState(() => _loading = true);
     try {
-      final invoices = await _repository.list();
+      final result = await _repository.list(page: _page);
       if (!mounted) return;
       setState(() {
-        _invoices = invoices;
-        _error = null;
+        _invoices.addAll(result.invoices);
+        _hasMore = _page < result.pagination.totalPages;
+        _page++;
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -39,41 +43,56 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     }
   }
 
+  Future<void> _refresh() async {
+    setState(() {
+      _invoices.clear();
+      _page = 1;
+      _hasMore = true;
+      _error = null;
+    });
+    await _loadMore();
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.simpleCurrency();
     return Scaffold(
       appBar: AppBar(title: const Text('Invoices')),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _refresh,
         child: _error != null
             ? Center(child: Text(_error!))
-            : _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _invoices.isEmpty
-                    ? const Center(child: Text('No invoices yet.'))
-                    : ListView.builder(
-                        itemCount: _invoices.length,
-                        itemBuilder: (context, index) {
-                          final invoice = _invoices[index];
-                          return ListTile(
-                            title: Text(invoice.invoiceNumber),
-                            subtitle: Text(
-                              '${DateFormat.yMd().format(invoice.periodStart)} – ${DateFormat.yMd().format(invoice.periodEnd)}',
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(currency.format(invoice.totalAmount)),
-                                Text(invoice.status, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                              ],
-                            ),
-                            onTap: () => Navigator.of(context)
-                                .push(MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoiceId: invoice.id))),
-                          );
-                        },
-                      ),
+            : _invoices.isEmpty && !_hasMore
+                ? const Center(child: Text('No invoices yet.'))
+                : ListView.builder(
+                    itemCount: _invoices.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == _invoices.length) {
+                        if (_hasMore) {
+                          _loadMore();
+                          return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+                        }
+                        return const SizedBox.shrink();
+                      }
+                      final invoice = _invoices[index];
+                      return ListTile(
+                        title: Text(invoice.invoiceNumber),
+                        subtitle: Text(
+                          '${DateFormat.yMd().format(invoice.periodStart)} – ${DateFormat.yMd().format(invoice.periodEnd)}',
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(currency.format(invoice.totalAmount)),
+                            Text(invoice.status, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                        onTap: () => Navigator.of(context)
+                            .push(MaterialPageRoute(builder: (_) => InvoiceDetailScreen(invoiceId: invoice.id))),
+                      );
+                    },
+                  ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+import '../calls/call.dart' show Pagination;
+
 /// Mirrors invoiceRepository.js's SELECT_FIELDS field-for-field. Invoices are generated
 /// server-side (invoices/generate.php, Super Admin only, manual — no cron creates these) — this
 /// app is read-only, same as the Node API itself.
@@ -50,4 +52,10 @@ class Invoice {
         createdAt: DateTime.parse(json['created_at'] as String),
         paidAt: json['paid_at'] != null ? DateTime.tryParse(json['paid_at'] as String) : null,
       );
+}
+
+class InvoiceListResult {
+  final List<Invoice> invoices;
+  final Pagination pagination;
+  InvoiceListResult(this.invoices, this.pagination);
 }
