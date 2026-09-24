@@ -1,0 +1,26 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background: exact brand navy from test11.dataposting.online/assets/css/marketing.css bg-soft token -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" fill="#0a0e1c"/>
+
+  <!-- Signal arcs (call-tracking motif) in the brand's secondary accent -->
+  <path d="M 340 300 A 340 340 0 0 1 730 420" fill="none" stroke="#7c8cff" stroke-width="26" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 390 380 A 230 230 0 0 1 660 470" fill="none" stroke="#7c8cff" stroke-width="26" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Phone handset glyph in the brand's primary cyan accent -->
+  <path d="M 372 470
+           C 372 430 404 398 444 398
+           L 468 398
+           C 486 398 502 410 507 428
+           L 520 472
+           C 524 487 519 503 506 512
+           L 480 531
+           C 508 596 552 640 617 668
+           L 636 642
+           C 645 629 661 624 676 628
+           L 720 641
+           C 738 646 750 662 750 680
+           L 750 704
+           C 750 744 718 776 678 776
+           C 500 776 372 648 372 470 Z"
+        fill="#38e0ff"/>
+</svg>

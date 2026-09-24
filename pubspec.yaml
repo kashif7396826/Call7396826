@@ -53,12 +53,31 @@ dependencies:
   # network-error toast — never used to fabricate data while offline.
   connectivity_plus: ^7.3.1
 
+  # Native image picker (camera/gallery) — used only by the publisher self-service profile
+  # screen's real company-logo upload (PATCH /publisher/me, multipart), mirroring
+  # publisher/settings.php's <input type="file" name="company_logo">.
+  image_picker: ^1.1.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+
+  # Generates every Android launcher icon size (plus the adaptive-icon foreground/background
+  # layers) from the two source images in assets/icon/ — real files, real brand colors
+  # (#0a0e1c navy, #38e0ff cyan — the exact tokens from the marketing site's own CSS), not
+  # placeholders. Run `flutter pub run flutter_launcher_icons` after `flutter create` (step 2
+  # in the Setup section above) and before the first real build.
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  image_path: "assets/icon/app_icon.png"
+  adaptive_icon_background: "#0a0e1c"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  min_sdk_android: 28
 
 flutter:
   uses-material-design: true

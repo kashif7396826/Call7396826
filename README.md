@@ -3,8 +3,9 @@
 Real mobile client for the CallDrag call-tracking CRM, talking to the live Node.js API at
 **api.calldrag.com** (`/home/zsziykvi/api.calldrag.com` on the host, a separate project from
 this one) — which itself reads/writes the same production MySQL database as the PHP web app at
-**test11.dataposting.online**. No mock data, no fake screens, no simulated calling anywhere in
-this codebase, per this project's explicit no-mock policy.
+**calldrag.com** (physically hosted at `/home/zsziykvi/test11.dataposting.online` — `calldrag.com`
+is a domain alias into that same docroot). No mock data, no fake screens, no simulated calling
+anywhere in this codebase, per this project's explicit no-mock policy.
 
 ## ⚠️ This code has never been built or run
 
@@ -41,7 +42,11 @@ flutter create --org com.calldrag --project-name calldrag_mobile .
 # 3. Install dependencies
 flutter pub get
 
-# 4. Apply the manifest/permission additions below, then run
+# 4. Generate the real launcher icon (navy/cyan, matching the brand — see assets/icon/) into
+#    the android/ scaffold step 2 just created. Safe to re-run any time the source SVGs change.
+flutter pub run flutter_launcher_icons
+
+# 5. Apply the manifest/permission additions below, then run
 flutter run
 ```
 
@@ -67,6 +72,14 @@ For inbound calling (see "Inbound calling setup" below), also add, inside `<appl
 </service>
 ```
 
+### Photo/gallery access (publisher logo upload)
+
+`image_picker` (used only by the publisher self-service profile screen's company-logo picker)
+declares its own required permissions via its plugin manifest — no manual
+`AndroidManifest.xml` edit needed. On Android 13+ it uses the system Photo Picker (no runtime
+permission prompt at all); on older versions it requests storage/media read access at the point
+the user taps "Add Company Logo," not at app launch.
+
 ### Android minSdkVersion
 
 `square_in_app_payments` (the official Square SDK, used for wallet top-up) requires
@@ -74,6 +87,18 @@ For inbound calling (see "Inbound calling setup" below), also add, inside `<appl
 `flutter create` (step 2 above), open `android/app/build.gradle` (or `build.gradle.kts`) and
 raise `minSdkVersion`/`minSdk` to `28` if it isn't already. `twilio_voice` doesn't impose a
 higher floor than this.
+
+### Android targetSdkVersion (check this before every Play Store submission, not just once)
+
+Google Play enforces a minimum `targetSdkVersion` for all new app submissions and updates, and
+**that minimum changes roughly once a year** — this README can't hardcode a number that stays
+correct. Before your first submission (and before every update after that), check Play
+Console's own current requirement at
+[Target API level requirements](https://support.google.com/googleplay/android-developer/answer/11926878)
+and set `targetSdkVersion`/`targetSdk` in `android/app/build.gradle` explicitly to match —
+don't rely on whatever Flutter's template defaults to for the SDK version you happen to have
+installed. Play Console will reject an upload that doesn't meet the current minimum, so this is
+self-verifying at submission time even if you skip the manual check.
 
 ## Inbound calling setup
 
@@ -108,13 +133,17 @@ inbound calling is unavailable — everything else in this app is unaffected.
 ## Pointing at a real backend for local development
 
 `lib/core/config/api_config.dart` defaults to `https://api.calldrag.com/api/v1` — the real
-production API. **As of 2026-09-22, the app itself is live and responding correctly there**
-(verified with a real authenticated request) — the one remaining blocker is that
-`api.calldrag.com` still serves the hosting account's default shared SSL certificate instead of
-a real one for that domain, so any client that correctly verifies the hostname (this app
-included) will refuse the connection until a real certificate is issued. That's a host-level
-permission gap (AutoSSL isn't enabled for this account), not something fixable from this
-project's code.
+production API. **As of 2026-09-23, this is fully live**: a real Let's Encrypt certificate for
+`api.calldrag.com` was issued via `acme.sh` (this account's AutoSSL feature is disabled, so the
+host's own cPanel SSL UI wasn't an option — `acme.sh`'s `cpanel_uapi` deploy hook installed it,
+working around a CageFS `uapi` proxy quirk that mangled raw multi-line PEM content passed as
+inline shell arguments) and verified end-to-end (`openssl s_client` shows the correct CN, real
+issuer, real expiry; `GET /health` returns 200 over it). The live Twilio TwiML App's Voice
+Request URL has also been repointed from the old PHP webhook
+(`webhooks/twiml_voice.php`) to this API's own
+(`https://api.calldrag.com/api/v1/webhooks/twilio/voice`) and confirmed via an independent
+re-fetch of the TwiML App's config — outbound calls placed from this app now get their TwiML
+from the Node path it was actually built to share with the browser softphone.
 
 For local development against a Node server running on your own machine:
 
@@ -150,16 +179,30 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   from `/publisher/*`, scoped entirely server-side through `tracking_numbers.publisher_user_id`
   (never client-level scoping, which would leak the rest of the client's numbers). No live
   calling, contacts, or wallet — a publisher is blocked from those server-side too. Publisher
-  self-service profile editing (`publisher/settings.php`'s richer version with company
-  name/logo/timezone/notify prefs) isn't ported — same gap as staff Edit Profile, just for the
-  publisher-specific fields.
+  self-service profile editing is now ported too: `publisher/settings.php`'s richer field set
+  (company name/logo, phone, timezone, notify-on-new-call) via the new `GET/PATCH /publisher/me`
+  and `POST /publisher/me/password` endpoints, including a real company-logo upload
+  (`image_picker` + multipart) — the uploaded file is written straight into the PHP app's own
+  `assets/uploads/publishers/` directory (both apps share the same host/account) so it's served
+  from the exact same public URL the web app already uses. Live-tested end-to-end 2026-09-23
+  against real publisher user id 10: real file written to disk, real DB row updated, full logo
+  URL round-tripped through `authService.js`'s `sanitizeUser()`, then reverted back to that
+  user's original values in cleanup.
 - **SMS** — a genuinely new capability, ahead of the web app (explicit sign-off — see the
   backend's own commit history): real send/receive via `/sms/threads`, a conversation view per
   contact, and live push for a real inbound message (`sms:event` over the same Socket.IO
   connection call events use). Send goes through the same DNC/client-suspension checks as
-  outbound calling before a real Twilio Messages API call. Reachable from the Messages tab or
-  a contact's own "Message" button. Twilio-provider only — a Telnyx number's messaging profile
-  isn't ported.
+  outbound calling before a real send call. Reachable from the Messages tab or a contact's own
+  "Message" button. Supports both providers — sending picks whichever provider has a default
+  outbound number configured for the client (Twilio first, Telnyx as fallback). The Telnyx send
+  path was live-tested against the real Telnyx API on 2026-09-23, found a real account-config
+  gap (no Telnyx number was attached to a Messaging Profile — `TELNYX_MESSAGING_PROFILE_ID` had
+  never been set), and that gap is now fixed for real: a Messaging Profile already existed on
+  the account, just unused, so its id was saved to `app_settings`, its inbound webhook URL was
+  set (was `null`), and both of the account's live Telnyx numbers were attached to it via a
+  real `PATCH /phone_numbers/{id}/messaging` call. Re-verified after: the same fictional-number
+  smoke test now fails only on the (intentionally invalid) destination, not the `from` number —
+  Telnyx SMS sending is genuinely live for both providers now.
 - **Outbound and inbound calling** — real Twilio Voice SDK integration (`twilio_voice`
   plugin). Outbound: `GET /calls/incoming/token` for the access token, the real outbound TwiML
   webhook server-side. Inbound: FCM device-token registration with token-refresh handling,
@@ -168,8 +211,10 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   native ConnectionService/CallKit UI becomes active — this app never draws its own
   incoming-call screen. Both need a real Firebase project to actually test inbound (see
   "Inbound calling setup" above) — the code doesn't fake that in the meantime, it degrades to
-  outbound-only. **Will not actually connect a call yet regardless** — see the TwiML App
-  repoint note below.
+  outbound-only. Outbound is otherwise fully live: the TwiML App now points at this API's own
+  webhook (see the SSL/repoint note above) — its real-call happy path (as opposed to the
+  webhook wiring, which is verified) still hasn't been exercised end-to-end, since this session
+  has consistently declined to place an actual live phone call unprompted.
 - **Real-time call events** — a real Socket.IO connection (`core/realtime/socket_service.dart`)
   to the same server that pushes `call:event` messages from `src/realtime/callEvents.js`.
 - **Wallet top-up** — real card tokenization via the official Square In-App Payments SDK
@@ -192,12 +237,6 @@ flutter run --dart-define=API_BASE_URL=http://localhost:4000/api/v1  # iOS simul
   (deliberately: this session won't place a real phone call to test it). Also needs
   `schema_phase26_conference_calling.sql` run before it does anything but 501 — see the Node
   API's own commit history.
-- **The live TwiML App repoint.** The Voice Request URL Twilio actually calls for outbound
-  calls still points at the PHP webhook (`webhooks/twiml_voice.php`), not the Node one this app
-  and the browser softphone are meant to share. This is a deliberate, already-discussed decision
-  to defer until `api.calldrag.com` is confirmed publicly reachable — flipping it early would
-  break the currently-working browser softphone. Until it happens, outbound calls placed from
-  this app will reach Twilio but the TwiML response will come from the old PHP path.
 
 ## Architecture
 

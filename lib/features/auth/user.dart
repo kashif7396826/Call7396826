@@ -5,6 +5,7 @@ class User {
   final int? clientId;
   final String name;
   final String? companyName;
+  final String? companyLogoPath; // full URL — authService.js's sanitizeUser() resolves the stored relative path
   final String email;
   final String? phone;
   final String timezone;
@@ -19,6 +20,7 @@ class User {
     required this.clientId,
     required this.name,
     required this.companyName,
+    required this.companyLogoPath,
     required this.email,
     required this.phone,
     required this.timezone,
@@ -34,6 +36,7 @@ class User {
         clientId: json['client_id'] as int?,
         name: json['name'] as String,
         companyName: json['company_name'] as String?,
+        companyLogoPath: json['company_logo_path'] as String?,
         email: json['email'] as String,
         phone: json['phone'] as String?,
         timezone: (json['timezone'] as String?) ?? 'UTC',

@@ -1,0 +1,29 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Adaptive icon foreground layer: glyph only, transparent background. Android's real
+       safe zone is a 66dp circle centered in a 108dp canvas (radius ~312.9px here) — the raw
+       glyph's worst-case corner (~750,776) sits at ~355.4px from center, ~42.6px OUTSIDE that
+       circle (computed, not eyeballed — see the audit that caught this). The 0.75 scale below
+       brings the worst-case point to ~266px, ~85% of the safe radius, so it survives circular/
+       squircle/rounded-square launcher masks with a real margin, not just "probably fine." -->
+  <g transform="translate(512 512) scale(0.75) translate(-512 -512)">
+    <path d="M 340 300 A 340 340 0 0 1 730 420" fill="none" stroke="#7c8cff" stroke-width="26" stroke-linecap="round" opacity="0.55"/>
+    <path d="M 390 380 A 230 230 0 0 1 660 470" fill="none" stroke="#7c8cff" stroke-width="26" stroke-linecap="round" opacity="0.8"/>
+
+    <path d="M 372 470
+             C 372 430 404 398 444 398
+             L 468 398
+             C 486 398 502 410 507 428
+             L 520 472
+             C 524 487 519 503 506 512
+             L 480 531
+             C 508 596 552 640 617 668
+             L 636 642
+             C 645 629 661 624 676 628
+             L 720 641
+             C 738 646 750 662 750 680
+             L 750 704
+             C 750 744 718 776 678 776
+             C 500 776 372 648 372 470 Z"
+          fill="#38e0ff"/>
+  </g>
+</svg>
