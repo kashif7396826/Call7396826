@@ -12,13 +12,16 @@ import 'call_repository.dart';
 /// positional — `toggleMute(bool isMuted)` / `toggleSpeaker(bool speakerIsOn)`. Trust this
 /// file's calls over the README if they disagree.
 ///
-/// Handles BOTH directions now. Outbound has always worked (no external dependency beyond
-/// Twilio itself). Inbound needs Firebase Cloud Messaging — the ONLY way twilio_voice delivers
-/// an incoming-call notification on Android — which needs a real Firebase project this repo
-/// can't include (see firebase_options.dart's placeholder and README.md's "Inbound calling
-/// setup"). Every method here degrades gracefully when Firebase isn't configured: outbound
-/// calling keeps working exactly as before, register() just registers with accessToken alone
-/// (deviceToken omitted) instead of throwing.
+/// Handles BOTH directions. Outbound needs Android PhoneAccount registration
+/// (_requestAndroidCallingPermissions, unconditional — a real device-tested bug: this used to be
+/// gated behind Firebase availability on the wrong assumption that it was inbound-only, which
+/// silently broke outbound calling on every device without a configured Firebase project, found
+/// 2026-09-24 against a real test account). Inbound additionally needs Firebase Cloud
+/// Messaging — the ONLY way twilio_voice delivers an incoming-call notification on Android —
+/// which needs a real Firebase project this repo can't include (see firebase_options.dart's
+/// placeholder and README.md's "Inbound calling setup"). Without Firebase, register() just
+/// registers with accessToken alone (deviceToken omitted) instead of throwing — outbound still
+/// works, inbound doesn't.
 ///
 /// Every call this places goes through the SAME TwiML webhook the browser softphone and
 /// GET /calls/incoming/token already use server-side (controllers/twilioWebhookController.js) —
@@ -44,10 +47,16 @@ class VoiceService {
   Future<String> register() async {
     final result = await _callRepository.getVoiceToken();
 
+    // PhoneAccount registration (Android's ConnectionService) is needed for OUTBOUND calls
+    // too, not just inbound — this was previously gated behind Firebase availability on the
+    // wrong assumption that it was inbound-only, which silently broke outbound calling on any
+    // device without a configured Firebase project. Unconditional now; only the FCM device
+    // token (genuinely inbound-only) stays gated behind Firebase.
+    await _requestAndroidCallingPermissions();
+
     String? deviceToken;
     if (_firebaseAvailable) {
       deviceToken = await _ensureFcmToken();
-      await _requestAndroidCallingPermissions();
     }
 
     await TwilioVoicePlatform.instance.setTokens(accessToken: result.token, deviceToken: deviceToken);
@@ -55,9 +64,12 @@ class VoiceService {
     return result.identity;
   }
 
-  /// Real permission requests, Android only — needed for the native ConnectionService UI that
-  /// shows incoming calls (twilio_voice's README: "Android Setup" / "Phone Account"). A no-op,
-  /// not a mock, on iOS/without Firebase: these calls are genuinely unnecessary there.
+  /// Real permission requests, Android only — registers this app's PhoneAccount with Android's
+  /// ConnectionService, required for BOTH outbound and inbound calling on this plugin (twilio_voice's
+  /// README: "Android Setup" / "Phone Account" — not inbound-only, despite how that section reads).
+  /// A no-op, not a mock, on iOS: these calls are genuinely unnecessary there. Runs regardless of
+  /// whether Firebase is configured — Firebase only gates the FCM device token, which really is
+  /// inbound-only.
   Future<void> _requestAndroidCallingPermissions() async {
     if (kIsWeb || !Platform.isAndroid || _androidCallingAccountRequested) return;
     _androidCallingAccountRequested = true;
