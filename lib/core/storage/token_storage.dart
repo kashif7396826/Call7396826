@@ -7,8 +7,13 @@ class TokenStorage {
   TokenStorage._();
   static final TokenStorage instance = TokenStorage._();
 
+  // flutter_secure_storage 11.x's default AndroidOptions() already uses strong encryption
+  // (AES-GCM with RSA-OAEP key wrapping) unconditionally — the old encryptedSharedPreferences
+  // flag this constructor took doesn't exist anymore because that behavior is no longer
+  // optional, found against a real Windows build 2026-09-27 (the API had genuinely moved since
+  // this code was written, exactly the kind of drift the README warned would need fixing).
   final _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(),
   );
 
   static const _accessTokenKey = 'access_token';
