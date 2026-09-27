@@ -95,7 +95,15 @@ class _ContactListScreenState extends State<ContactListScreen> {
                         },
                       ),
       ),
-      floatingActionButton: FloatingActionButton(onPressed: _createContact, child: const Icon(Icons.person_add)),
+      // Explicit heroTag: home_shell.dart keeps every tab screen mounted at once via
+      // IndexedStack (for instant tab switching), so every FAB on every tab is simultaneously
+      // in the tree — without a unique tag they all collide on Flutter's shared default Hero
+      // tag, a real crash confirmed against a live device 2026-09-27, not a rare edge case.
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'contactListFab',
+        onPressed: _createContact,
+        child: const Icon(Icons.person_add),
+      ),
     );
   }
 }

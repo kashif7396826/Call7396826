@@ -48,7 +48,9 @@ class _DialerScreenState extends State<DialerScreen> {
                   Text(calls.errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 ],
                 const Spacer(),
+                // Explicit heroTag — see contact_list_screen.dart's own FAB for why.
                 FloatingActionButton.large(
+                  heroTag: 'dialerCallFab',
                   backgroundColor: Colors.green,
                   onPressed: () => _call(calls),
                   child: const Icon(Icons.call, color: Colors.white),

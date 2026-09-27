@@ -75,7 +75,12 @@ class _InCallScreenState extends State<InCallScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
+                  // Explicit heroTag — see contact_list_screen.dart's own FAB for why. This
+                  // screen is pushed (not IndexedStack-resident like the tabs), but the same
+                  // collision happens transiently against whichever screen's FAB is still in
+                  // the tree during the push transition (e.g. dialer_screen's own FAB).
                   FloatingActionButton.large(
+                    heroTag: 'inCallHangupFab',
                     backgroundColor: Colors.red,
                     onPressed: calls.hangUp,
                     child: const Icon(Icons.call_end, color: Colors.white),

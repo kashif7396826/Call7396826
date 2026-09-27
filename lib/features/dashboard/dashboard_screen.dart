@@ -76,7 +76,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
       ),
+      // Explicit heroTag — see contact_list_screen.dart's own FAB for why (IndexedStack keeps
+      // every tab's FAB mounted at once, all colliding on the shared default tag otherwise).
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'dashboardFab',
         onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DialerScreen())),
         icon: const Icon(Icons.dialpad),
         label: const Text('New Call'),

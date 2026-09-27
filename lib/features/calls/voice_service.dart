@@ -19,16 +19,22 @@ import 'call_repository.dart';
 /// 2026-09-24 against a real test account). Inbound additionally needs Firebase Cloud
 /// Messaging — the ONLY way twilio_voice delivers an incoming-call notification on Android —
 /// which needs a real Firebase project this repo can't include (see firebase_options.dart's
-/// placeholder and README.md's "Inbound calling setup"). Without Firebase, register() just
-/// registers with accessToken alone (deviceToken omitted) instead of throwing — outbound still
-/// works, inbound doesn't.
+/// placeholder and README.md's "Inbound calling setup"). Without a REAL Firebase project,
+/// register() degrades to accessToken alone (deviceToken omitted) — but this degrading has to
+/// be an explicit try/catch around the actual FCM call, not just a check of
+/// Firebase.apps.isNotEmpty: a placeholder firebase_options.dart still lets
+/// Firebase.initializeApp() register an app locally, so that check alone doesn't catch it —
+/// the real failure only surfaces when FirebaseMessaging actually talks to Firebase's servers,
+/// as a real uncaught exception ("Please set your Application ID") that used to abort outbound
+/// calling too before this was caught here (found against a real device, 2026-09-27).
 ///
 /// Every call this places goes through the SAME TwiML webhook the browser softphone and
 /// GET /calls/incoming/token already use server-side (controllers/twilioWebhookController.js) —
-/// once the pending TwiML App repoint (test11.dataposting.online's CLAUDE.md) happens, this
-/// becomes a real, billed, recorded call exactly like any other CallDrag call. Same for
-/// inbound: the number that's actually configured to ring this agent's Voice SDK identity is
-/// entirely a server-side concern (includes/twilio_jwt.php's identity scheme), unchanged here.
+/// the TwiML App's Voice Request URL now points at this Node API (repointed and verified
+/// 2026-09-23), so this is a real, billed, recorded call exactly like any other CallDrag call.
+/// Same for inbound: the number that's actually configured to ring this agent's Voice SDK
+/// identity is entirely a server-side concern (includes/twilio_jwt.php's identity scheme),
+/// unchanged here.
 class VoiceService {
   VoiceService._();
   static final VoiceService instance = VoiceService._();
@@ -54,9 +60,21 @@ class VoiceService {
     // token (genuinely inbound-only) stays gated behind Firebase.
     await _requestAndroidCallingPermissions();
 
+    // _firebaseAvailable alone isn't enough to know FCM will actually work — a placeholder
+    // firebase_options.dart (no real Firebase project yet) still lets Firebase.initializeApp()
+    // register an app locally (Firebase.apps.isNotEmpty becomes true), so this branch runs, but
+    // the ACTUAL FirebaseMessaging network call against that fake project then throws a real,
+    // uncaught exception ("Please set your Application ID") — confirmed against a real device
+    // 2026-09-27. That exception has to be caught HERE, not just gated on _firebaseAvailable,
+    // or it aborts the whole register()/placeCall() chain and breaks outbound calling too, even
+    // though this whole block is only ever meant to affect inbound.
     String? deviceToken;
     if (_firebaseAvailable) {
-      deviceToken = await _ensureFcmToken();
+      try {
+        deviceToken = await _ensureFcmToken();
+      } catch (e) {
+        deviceToken = null;
+      }
     }
 
     await TwilioVoicePlatform.instance.setTokens(accessToken: result.token, deviceToken: deviceToken);
