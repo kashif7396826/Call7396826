@@ -149,7 +149,13 @@ class VoiceService {
     final result = await TwilioVoicePlatform.instance.call.place(
       from: from,
       to: to,
-      extraOptions: const {'Platform': 'mobile'},
+      // NOT const — the plugin adds its own entries into this same map internally before
+      // sending it over the platform channel; a `const` (compile-time immutable) map makes
+      // that throw "Unsupported operation: Cannot modify unmodifiable map", which was silently
+      // aborting every outbound call before it ever reached Twilio (confirmed against a real
+      // device 2026-09-28 — this explained the blank in-call screen: startCall()'s catch block
+      // reset state back to idle before the screen could show anything).
+      extraOptions: {'Platform': 'mobile'},
     );
     return result ?? false;
   }
