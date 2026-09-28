@@ -20,8 +20,15 @@ class _DialerScreenState extends State<DialerScreen> {
   }
 
   Future<void> _call(CallProvider calls) async {
-    final number = _numberController.text.trim();
+    var number = _numberController.text.trim();
     if (number.isEmpty) return;
+    // Same normalization as the web softphone's assets/js/softphone.js — real production calls
+    // were reaching Twilio with a literal "00" international prefix instead of "+" (confirmed
+    // via the live calls table), which fails to connect. Every native dialer does this same
+    // normalization.
+    if (number.startsWith('00')) {
+      number = '+${number.substring(2)}';
+    }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InCallScreen()));
     await calls.startCall(number);
   }
