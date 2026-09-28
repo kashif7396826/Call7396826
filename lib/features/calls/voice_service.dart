@@ -77,7 +77,14 @@ class VoiceService {
       }
     }
 
-    await TwilioVoicePlatform.instance.setTokens(accessToken: result.token, deviceToken: deviceToken);
+    // The native setTokens handler requires the 'deviceToken' map key to be present as a
+    // String — a Dart `null` doesn't survive the platform channel as a usable value and the
+    // native side throws PlatformException(MALFORMED_ARGUMENTS, "No 'deviceToken' provided or
+    // invalid type") outright, aborting registration entirely (confirmed against a real device
+    // 2026-09-28). The plugin's own registerForCallInvites() already treats an EMPTY string
+    // gracefully (logs and no-ops, doesn't throw) — traced directly against the plugin's real
+    // source — so '' is the correct "no FCM" signal here, not null.
+    await TwilioVoicePlatform.instance.setTokens(accessToken: result.token, deviceToken: deviceToken ?? '');
     _registered = true;
     return result.identity;
   }
