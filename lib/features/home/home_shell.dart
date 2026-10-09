@@ -6,11 +6,10 @@ import '../calls/call_history_screen.dart';
 import '../calls/call_provider.dart';
 import '../calls/in_call_screen.dart';
 import '../calls/voice_service.dart';
+import '../campaigns/campaigns_screen.dart';
 import '../contacts/contact_list_screen.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../profile/profile_screen.dart';
-import '../sms/sms_threads_screen.dart';
-import '../wallet/wallet_screen.dart';
+import '../reports/reports_screen.dart';
 
 /// The authenticated app shell — bottom-tab navigation plus the real-time Socket.IO
 /// connection's lifetime (connects here, once, for as long as the user stays logged in;
@@ -23,15 +22,14 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   int _index = 0;
   final _screens = const [
     DashboardScreen(),
     CallHistoryScreen(),
     ContactListScreen(),
-    SmsThreadsScreen(),
-    WalletScreen(),
-    ProfileScreen(),
+    CampaignsScreen(),
+    ReportsScreen(),
   ];
 
   // Captured once in initState() rather than looked up again in dispose() — calling
@@ -58,15 +56,46 @@ class _HomeShellState extends State<HomeShell> {
     // until the next successful registration. Wrapped in its own try/catch (not
     // .catchError()) since register() returns Future<String> and a .catchError handler that
     // returns nothing would itself throw trying to complete a non-nullable String future.
-    unawaited(() async {
-      try {
-        await VoiceService.instance.register();
-      } catch (_) {}
-    }());
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_registerVoice());
+  }
+
+  /// Registers for incoming calls and makes any failure VISIBLE — a silent failure here was
+  /// exactly why inbound calling was undiagnosable for days. Messages never include tokens.
+  Future<void> _registerVoice() async {
+    try {
+      final identity = await VoiceService.instance.register();
+      debugPrint('HomeShell: VoiceService.register() succeeded, identity=$identity');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      if (!VoiceService.instance.phoneAccountEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          duration: const Duration(seconds: 12),
+          content: const Text('Turn on the CallDrag calling account so incoming calls can ring.'),
+          action: SnackBarAction(label: 'ENABLE', onPressed: VoiceService.instance.openPhoneAccountSettings),
+        ));
+      }
+    } catch (e, st) {
+      debugPrint('HomeShell: VoiceService.register() failed: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Incoming-call setup failed. Check your connection and reopen the app.')),
+      );
+    }
+  }
+
+  // Coming back from Android's Settings screen (after enabling the calling account) re-checks
+  // it, so the user doesn't have to restart the app.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !VoiceService.instance.phoneAccountEnabled) {
+      unawaited(_registerVoice());
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _calls.onIncomingCallActive = null;
     SocketService.instance.disconnect();
     super.dispose();
@@ -111,12 +140,11 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.history), label: 'Calls'),
+          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+          NavigationDestination(icon: Icon(Icons.call_outlined), selectedIcon: Icon(Icons.call), label: 'Calls'),
           NavigationDestination(icon: Icon(Icons.contacts_outlined), selectedIcon: Icon(Icons.contacts), label: 'Contacts'),
-          NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
-          NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
+          NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign), label: 'Campaigns'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Reports'),
         ],
       ),
     );

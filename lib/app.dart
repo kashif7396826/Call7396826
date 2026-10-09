@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calls/call_provider.dart';
 import 'features/home/home_shell.dart';
 import 'features/publisher/publisher_home_shell.dart';
+import 'features/splash/splash_screen.dart';
 
 class CallDragApp extends StatelessWidget {
   const CallDragApp({super.key});
@@ -19,8 +21,9 @@ class CallDragApp extends StatelessWidget {
       child: MaterialApp(
         title: 'CallDrag',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
-        darkTheme: ThemeData(colorSchemeSeed: Colors.blue, brightness: Brightness.dark, useMaterial3: true),
+        theme: AppTheme.dark,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.dark,
         home: const _AuthGate(),
       ),
     );
@@ -38,7 +41,7 @@ class _AuthGate extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     switch (auth.status) {
       case AuthStatus.unknown:
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        return const SplashScreen();
       case AuthStatus.authenticated:
         // A publisher is blocked server-side from every route the staff shell's tabs use
         // (contacts, wallet, live calling, real-time — all requireNonPublisher()) — routed to

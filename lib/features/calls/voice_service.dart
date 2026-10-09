@@ -72,9 +72,14 @@ class VoiceService {
     if (_firebaseAvailable) {
       try {
         deviceToken = await _ensureFcmToken();
-      } catch (e) {
+        // Length only — a device token identifies this phone to FCM and must not be logged.
+        debugPrint('VoiceService.register: got FCM token (len=${deviceToken?.length})');
+      } catch (e, st) {
+        debugPrint('VoiceService.register: _ensureFcmToken() failed: $e\n$st');
         deviceToken = null;
       }
+    } else {
+      debugPrint('VoiceService.register: _firebaseAvailable is false, skipping FCM token fetch');
     }
 
     // The native setTokens handler requires the 'deviceToken' map key to be present as a
@@ -86,8 +91,29 @@ class VoiceService {
     // source — so '' is the correct "no FCM" signal here, not null.
     await TwilioVoicePlatform.instance.setTokens(accessToken: result.token, deviceToken: deviceToken ?? '');
     _registered = true;
+    await _refreshPhoneAccountEnabled();
     return result.identity;
   }
+
+  /// False when Android has this app's calling account switched off (Settings > Calling
+  /// accounts). Registering the account in code is not enough — the user must enable it, and
+  /// until they do Android never shows the native incoming-call screen, even if Twilio's push
+  /// arrives fine (seen live 2026-09-29: "PhoneAccount is not enabled"). Re-checked on every
+  /// register() so enabling it in Settings takes effect on the next app resume.
+  bool phoneAccountEnabled = true;
+
+  Future<void> _refreshPhoneAccountEnabled() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      phoneAccountEnabled = await TwilioVoicePlatform.instance.isPhoneAccountEnabled();
+      debugPrint('VoiceService: calling account enabled=$phoneAccountEnabled');
+    } catch (e) {
+      debugPrint('VoiceService: could not read calling-account state: $e');
+    }
+  }
+
+  /// Opens Android's calling-accounts settings so the user can switch this app's account on.
+  Future<void> openPhoneAccountSettings() => TwilioVoicePlatform.instance.openPhoneAccountSettings();
 
   /// Real permission requests, Android only — registers this app's PhoneAccount with Android's
   /// ConnectionService, required for BOTH outbound and inbound calling on this plugin (twilio_voice's
@@ -95,6 +121,12 @@ class VoiceService {
   /// A no-op, not a mock, on iOS: these calls are genuinely unnecessary there. Runs regardless of
   /// whether Firebase is configured — Firebase only gates the FCM device token, which really is
   /// inbound-only.
+  ///
+  /// requestMicAccess() (RECORD_AUDIO) is required too — without it, call.place() fails its own
+  /// internal hasMicAccess() check ("No microphone permission, call `requestMicrophonePermission()`
+  /// first") and the call never reaches Twilio at all, confirmed against a real device 2026-09-28.
+  /// Verified against the plugin's real platform-interface source (hasMicAccess()/requestMicAccess()
+  /// in twilio_voice_platform_interface.dart) rather than assumed from the README.
   Future<void> _requestAndroidCallingPermissions() async {
     if (kIsWeb || !Platform.isAndroid || _androidCallingAccountRequested) return;
     _androidCallingAccountRequested = true;
@@ -103,6 +135,7 @@ class VoiceService {
     await platform.registerPhoneAccount();
     await platform.requestCallPhonePermission();
     await platform.requestReadPhoneStatePermission();
+    await platform.requestMicAccess();
   }
 
   /// Requests notification permission (iOS/Android 13+) and returns the current FCM token,

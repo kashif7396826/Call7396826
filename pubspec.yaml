@@ -58,6 +58,10 @@ dependencies:
   # publisher/settings.php's <input type="file" name="company_logo">.
   image_picker: ^1.1.2
 
+  # Real charts for the Dashboard/Reports screens (call-volume trend) — driven entirely by
+  # GET /reports/summary's real daily counts, never fabricated sample data.
+  fl_chart: ^0.69.2
+
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
